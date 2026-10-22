@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=1920, height=1080">
+<title>TizenZen</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="stage">
+  <div id="glow"></div>
+  <video id="bg" muted playsinline preload="auto"></video>
+  <div id="scrim"></div>
+
+  <header class="top">
+    <div class="clock">
+      <div id="time">--:--</div>
+      <div id="date"></div>
+    </div>
+
+    <div class="today">
+      <div class="city" id="city"></div>
+      <div class="now">
+        <span id="nowIcon" class="icon"></span>
+        <span id="nowTemp">--°</span>
+      </div>
+      <div id="nowText" class="muted"></div>
+      <div id="nowRange" class="muted"></div>
+      <div id="nowSun" class="muted small"></div>
+    </div>
+  </header>
+
+  <main class="apps" id="apps"></main>
+
+  <footer class="week" id="week"></footer>
+  <div id="place" class="muted tiny"></div>
+  <div id="updated" class="muted tiny"></div>
+
+  <div id="dim"></div>
+  <div id="picker"></div>
+  <div id="toast"></div>
+</div>
+<script src="config.js"></script>
+<script src="config.local.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

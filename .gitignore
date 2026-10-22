@@ -1,0 +1,13 @@
+# private settings and secrets: never commit
+app/config.local.js
+tools/tv-remote-token
+*.token
+# private notes (anything personal goes here)
+private/
+notes/
+*.local.md
+# build output
+*.wgt
+build/
+__pycache__/
+.DS_Store

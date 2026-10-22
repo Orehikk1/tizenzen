@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1920 1080" preserveAspectRatio="xMidYMid slice">
+  <!-- Original artwork for TizenZen renders: dawn over layered mountains. -->
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#0f1b33"/>
+      <stop offset="0.38" stop-color="#2a3d63"/>
+      <stop offset="0.62" stop-color="#7f6f8f"/>
+      <stop offset="0.80" stop-color="#e3a98a"/>
+      <stop offset="1" stop-color="#f6d2a8"/>
+    </linearGradient>
+    <radialGradient id="sun" cx="0.66" cy="0.50" r="0.36">
+      <stop offset="0" stop-color="#fff2d6" stop-opacity="0.95"/>
+      <stop offset="0.18" stop-color="#ffd8a6" stop-opacity="0.55"/>
+      <stop offset="1" stop-color="#ffd8a6" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="mist" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#f3d9c4" stop-opacity="0"/>
+      <stop offset="0.5" stop-color="#f3d9c4" stop-opacity="0.55"/>
+      <stop offset="1" stop-color="#f3d9c4" stop-opacity="0"/>
+    </linearGradient>
+    <linearGradient id="m1" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#9a8aa6"/><stop offset="1" stop-color="#b9a3a8"/></linearGradient>
+    <linearGradient id="m2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6d6687"/><stop offset="1" stop-color="#8a7d93"/></linearGradient>
+    <linearGradient id="m3" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3f4566"/><stop offset="1" stop-color="#565a77"/></linearGradient>
+    <linearGradient id="m4" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1c2340"/><stop offset="1" stop-color="#121830"/></linearGradient>
+    <linearGradient id="lake" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#e8b996" stop-opacity="0.9"/><stop offset="1" stop-color="#2a2f4d"/></linearGradient>
+  </defs>
+  <rect width="1920" height="1080" fill="url(#sky)"/>
+  <rect width="1920" height="1080" fill="url(#sun)"/>
+  <circle cx="1268" cy="540" r="52" fill="#fff4e0" opacity="0.95"/>
+  <!-- far range -->
+  <path d="M0 640 L120 590 L210 612 L330 540 L430 585 L560 520 L660 566 L780 498 L900 560 L1010 530 L1120 575 L1240 520 L1360 585 L1480 548 L1600 600 L1720 556 L1830 596 L1920 570 L1920 1080 L0 1080 Z" fill="url(#m1)" opacity="0.85"/>
+  <rect y="590" width="1920" height="140" fill="url(#mist)"/>
+  <!-- mid range with a sharp peak -->
+  <path d="M0 720 L90 690 L200 705 L300 640 L380 668 L470 600 L520 618 L600 520 L640 548 L700 470 L760 560 L840 600 L930 650 L1040 620 L1150 668 L1260 640 L1380 700 L1500 660 L1620 705 L1760 670 L1920 700 L1920 1080 L0 1080 Z" fill="url(#m2)"/>
+  <path d="M700 470 L745 535 L725 528 L700 556 L688 520 L672 535 Z" fill="#e9dbe0" opacity="0.55"/>
+  <rect y="690" width="1920" height="110" fill="url(#mist)" opacity="0.8"/>
+  <!-- near ridge -->
+  <path d="M0 800 L140 760 L260 790 L380 742 L520 790 L640 770 L760 820 L900 800 L1040 838 L1180 806 L1320 846 L1460 812 L1600 850 L1760 818 L1920 842 L1920 1080 L0 1080 Z" fill="url(#m3)"/>
+  <!-- lake with sun reflection -->
+  <path d="M0 880 Q480 862 960 874 T1920 870 L1920 1080 L0 1080 Z" fill="url(#lake)" opacity="0.85"/>
+  <rect x="1233" y="884" width="70" height="3" fill="#fff1d9" opacity="0.7"/>
+  <rect x="1213" y="900" width="110" height="2" fill="#fff1d9" opacity="0.45"/>
+  <rect x="1245" y="918" width="46" height="2" fill="#fff1d9" opacity="0.35"/>
+  <!-- foreground shore -->
+  <path d="M0 960 L160 930 L300 952 L430 920 L560 962 L700 990 L0 1080 Z M1920 950 L1760 930 L1620 960 L1500 945 L1380 990 L1920 1080 Z" fill="url(#m4)"/>
+  <rect y="1000" width="1920" height="80" fill="#121830"/>
+</svg>
