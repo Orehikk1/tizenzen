@@ -18,7 +18,7 @@ and you remove it like any app.
 **Ask your assistant.** Open Claude Code (or another coding assistant with a terminal) on a computer
 on the same network as the TV, and paste:
 
-> Set up TizenZen on my Samsung TV: https://github.com/&lt;owner&gt;/tizenzen. Follow AGENTS.md.
+> Set up TizenZen on my Samsung TV: https://github.com/Orehikk1/tizenzen. Follow AGENTS.md.
 
 It finds the TV, tells you the two things you need to do with the remote (turn on Developer Mode,
 and once press Power), installs, and tests everything itself.
