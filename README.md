@@ -75,7 +75,8 @@ There is also a printable guide: [docs/TizenZen-guide.pdf](docs/TizenZen-guide.p
 2. **The watcher** is a background service inside the same package. It starts with the TV and asks
    the TV's local API, three times a second, what is on screen. When Samsung's home covers TizenZen,
    or you leave an app, it brings TizenZen back. When the TV wakes from standby it reopens TizenZen
-   at once, without waiting for the network.
+   at once, without waiting for the network. While you mirror a Mac or iPhone with AirPlay it stays
+   out of the way, and brings TizenZen back about a minute after the mirroring stops.
 3. **HDMI** plays in a window inside TizenZen, so watching a console never looks like "covered".
 
 ## Made by a person and Claude, as coworkers

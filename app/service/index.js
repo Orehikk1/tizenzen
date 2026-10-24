@@ -8,6 +8,7 @@
 //   - Samsung's home bar at boot or after Home was pressed: Home hidden, no app opened -> reopen.
 //   - Home pressed inside an app Home opened: that app went visible -> hidden -> reopen.
 //   - An app that starts on its own (cast from a phone): newly running -> leave it alone.
+//   - AirPlay / screen mirroring: invisible to the local API, found in the app contexts -> leave it alone.
 // HDMI is shown inside the Home app (tvwindow), so watching the PS5 never looks like "covered".
 // After the TV wakes from standby (remote power button) the local API can take about a minute to
 // come back, so a wake is detected from the timer gap and Home is opened at once via the Tizen API.
@@ -61,6 +62,21 @@ function snapshot(cb) {
   });
 }
 
+// AirPlay / screen mirroring from a Mac or iPhone is a Samsung system screen. The local API says
+// it is not running even while it is on screen, but it does show up in the Tizen app contexts.
+// One of its two contexts can drop out for a moment mid-cast, so the cast only counts as ended
+// after CAST_END_MS without either.
+var CAST_APPS = ['com.samsung.tv.airplay-app', 'NRi6kdBYJ0.AirPlayWebApp'];
+var CAST_END_MS = 5000;
+function castOn(cb) {
+  try {
+    tizen.application.getAppsContext(function (ctx) {
+      state.contexts = ctx.map(function (c) { return c.appId; });
+      cb(ctx.some(function (c) { return CAST_APPS.indexOf(c.appId) >= 0; }));
+    }, function () { cb(false); });
+  } catch (e) { cb(false); }
+}
+
 function launchSelf(why) {
   // Rate-limited so a failing relaunch can't loop. The TV's local API ignores launch requests
   // coming from the TV itself, so this uses the Tizen application API.
@@ -97,7 +113,7 @@ function tick() {
     if (!me) { return; }
     var now = Date.now();
     if (me.visible) {
-      state.selfVisible = true; state.hiddenSince = 0; state.watched = null; state.coveredSince = 0;
+      state.selfVisible = true; state.hiddenSince = 0; state.watched = null; state.coveredSince = 0; state.castAt = 0;
       if (now - (state.snapAt || 0) > 5000) { state.snapAt = now; snapshot(function (r) { delete r.__visible; state.running = r; state.haveBaseline = true; }); }
       return;
     }
@@ -144,8 +160,21 @@ function tick() {
         }
       }
       state.running = r;
-      if (!state.coveredSince) { state.coveredSince = t; return; }
-      if (t - state.coveredSince >= COVER_GRACE_MS) { state.coveredSince = 0; launchSelf('covered without an app'); }
+      castOn(function (cast) {
+        var t2 = Date.now();
+        if (cast) {
+          if (!state.castAt) { note('stand aside: AirPlay'); }
+          state.castAt = t2; state.coveredSince = 0;
+          return;
+        }
+        if (state.castAt) {
+          if (t2 - state.castAt < CAST_END_MS) { return; }
+          state.castAt = 0; launchSelf('AirPlay ended');
+          return;
+        }
+        if (!state.coveredSince) { state.coveredSince = t2; return; }
+        if (t2 - state.coveredSince >= COVER_GRACE_MS) { state.coveredSince = 0; launchSelf('covered without an app'); }
+      });
     });
   });
 }

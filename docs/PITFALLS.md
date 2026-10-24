@@ -111,3 +111,27 @@ Samsung account, in their browser). See its `src/aerotizen/certs.py` and Tizen S
   network from standby turned it fully off on our TV.
 - Hidden service / hotel menus: not needed, risky. Do not suggest them.
 - The `samsung.remote.control` websocket on port 8001 (no TLS) never answered on 2020 firmware; use 8002.
+- Holding Power over the network (`tvkey.py HOLD:KEY_POWER:4000`) does not restart the TV. It turned
+  ours fully off, and the person had to press Power on the remote.
+- Reading `/proc/net/tcp` from the service to spot AirPlay connections found nothing. Use the app
+  contexts instead (#14).
+
+### 14. AirPlay / screen mirroring gets kicked after a minute
+**Symptom:** you mirror a Mac or iPhone to the TV. It works, then TizenZen jumps back over it after
+somewhere between a few seconds and a minute. `status.sh` shows `reopened: covered without an app` again and again.
+**Cause:** AirPlay is a Samsung system screen, not an app TizenZen opened. The local API is no help:
+`curl :8001/api/v2/applications/NRi6kdBYJ0.AirPlayWebApp` says `"running":false` even while the
+mirrored picture is on screen. So the watcher saw "nothing on screen" and took it back.
+**What TizenZen does:** while TizenZen is covered, the service also reads
+`tizen.application.getAppsContext()`. During a cast it lists `com.samsung.tv.airplay-app` and
+`NRi6kdBYJ0.AirPlayWebApp`; while either is there, the watcher stands aside (`stand aside: AirPlay`).
+One of the two can drop out for a moment mid-cast, so the cast only counts as ended after 5 s
+without both (`CAST_END_MS`). Both stay listed for about 60 s after the cast stops, so TizenZen
+comes back about a minute after mirroring ends (`reopened: AirPlay ended`). Press Home to skip the wait.
+**If mirroring stays black after being kicked:** the Mac can say "Connected" while the TV's AirPlay
+receiver is stuck. Disconnect on the Mac, power the TV off and on with the remote, connect again.
+**Verify:** mirror for two minutes, then stop. `status.sh` shows `stand aside: AirPlay` and, about a
+minute after stopping, `reopened: AirPlay ended`. `curl http://<tv>:47791/` has a `contexts` list with
+every app context the service saw last; check the AirPlay names there if your firmware differs.
+On a Mac, mirroring can be started without hands with AppleScript: Control Centre >
+checkbox `controlcenter-screen-mirroring` (click) > checkbox `screen-mirroring-device-AirPlay:<tv mac>` (AXPress).
