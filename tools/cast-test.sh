@@ -15,9 +15,10 @@ soap() {
 case $1 in
 play)
   [ -f "$FILE" ] || { echo "give an .mp4 (H.264) file"; exit 1; }
-  DIR=$(cd "$(dirname "$FILE")" && pwd); NAME=$(basename "$FILE")
+  # serve only this one file (a link in an empty temp folder), not the folder it sits in
+  DIR=$(mktemp -d); NAME=test.mp4; ln -s "$(cd "$(dirname "$FILE")" && pwd)/$(basename "$FILE")" "$DIR/$NAME"
   python3 -m http.server 8765 --directory "$DIR" --bind 0.0.0.0 >/dev/null 2>&1 & SRV=$!
-  trap 'kill $SRV 2>/dev/null' EXIT INT TERM; sleep 1
+  trap 'kill $SRV 2>/dev/null; rm -rf "$DIR"' EXIT INT TERM; sleep 1
   URL=http://$MY_IP:8765/$NAME
   META='&lt;DIDL-Lite xmlns="urn:schemas-upnp-org:metadata-1-0/DIDL-Lite/" xmlns:upnp="urn:schemas-upnp-org:metadata-1-0/upnp/" xmlns:dc="http://purl.org/dc/elements/1.1/"&gt;&lt;item id="1" parentID="0" restricted="1"&gt;&lt;dc:title&gt;test&lt;/dc:title&gt;&lt;upnp:class&gt;object.item.videoItem&lt;/upnp:class&gt;&lt;res protocolInfo="http-get:*:video/mp4:*"&gt;'$URL'&lt;/res&gt;&lt;/item&gt;&lt;/DIDL-Lite&gt;'
   soap SetAVTransportURI "<CurrentURI>$URL</CurrentURI><CurrentURIMetaData>$META</CurrentURIMetaData>"

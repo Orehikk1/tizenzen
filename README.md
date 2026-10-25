@@ -33,6 +33,8 @@ and once press Power), installs, and tests everything itself.
 - **Apps**: a short list of your other apps (Samsung blocks apps from opening its own Apps screen).
 - **Settings**: Samsung's settings menu, on top of TizenZen (needs the optional helper, see below).
 - **Comes back by itself**: when the TV wakes, and when you close an app.
+- **Casting works**: AirPlay mirroring and videos shared from a phone play undisturbed; TizenZen
+  waits until they end.
 - **Sunset dim**: the screen gets darker and warmer after sunset.
 - **Aerial videos** (optional, yellow button): Apple's TV screensaver aerials, streamed. The night set
   shows cities and auroras from space.
@@ -49,7 +51,7 @@ and once press Power), installs, and tests everything itself.
 ## For Claude (and other assistants)
 
 Start with **[AGENTS.md](AGENTS.md)**: the full playbook, written by Claude after doing this the long
-way on a real TV. Then **[docs/PITFALLS.md](docs/PITFALLS.md)**: 13 places where the obvious idea
+way on a real TV. Then **[docs/PITFALLS.md](docs/PITFALLS.md)**: 15 places where the obvious idea
 fails on Tizen, each with the symptom, the cause, the fix and a command to check it yourself.
 
 What is in the box:
@@ -62,6 +64,7 @@ What is in the box:
 | `tools/deploy.sh` | Package, install and start on the TV |
 | `tools/selftest.sh` | Opens and closes apps over the network and checks TizenZen comes back. Prints PASS |
 | `tools/status.sh` | The watcher's own log: every decision it made |
+| `tools/cast-test.sh` | Sends a video to the TV like a phone does (DLNA, no pairing), to test casting |
 | `tools/tvkey.py` | Remote keys over the network (Home, Back, long press, Power) |
 | `tools/camera-snap.sh` | A photo of the TV through a phone camera, when only a screen can tell ([docs/CAMERA.md](docs/CAMERA.md)) |
 | `tools/keyhelper.py` | Optional: lets the Settings tile open Samsung's settings ([docs/SETTINGS-HELPER.md](docs/SETTINGS-HELPER.md)) |
@@ -75,8 +78,11 @@ There is also a printable guide: [docs/TizenZen-guide.pdf](docs/TizenZen-guide.p
 2. **The watcher** is a background service inside the same package. It starts with the TV and asks
    the TV's local API, three times a second, what is on screen. When Samsung's home covers TizenZen,
    or you leave an app, it brings TizenZen back. When the TV wakes from standby it reopens TizenZen
-   at once, without waiting for the network. While you mirror a Mac or iPhone with AirPlay it stays
-   out of the way, and brings TizenZen back about a minute after the mirroring stops.
+   at once, without waiting for the network. While you mirror a Mac or iPhone with AirPlay, or play
+   a video shared from a phone, it stays out of the way, even if the cast lands on top of YouTube.
+   Samsung's local API cannot see these screens, so the watcher reads the TV's list of running
+   system apps instead. A shared video hands the screen back as soon as it ends; mirroring takes
+   about a minute.
 3. **HDMI** plays in a window inside TizenZen, so watching a console never looks like "covered".
 
 ## Made by a person and Claude, as coworkers

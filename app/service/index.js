@@ -161,7 +161,7 @@ function tick() {
         return;
       }
       if (r.__visible) {
-        state.watched = r.__visible; state.seen = true; state.coveredSince = 0; delete r.__visible; state.running = r;
+        state.watched = r.__visible; state.seen = true; state.coveredSince = 0; state.castAt = 0; delete r.__visible; state.running = r;
         note('stand aside: ' + state.watched + ' is on screen');
         return;
       }
