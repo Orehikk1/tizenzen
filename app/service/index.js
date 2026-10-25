@@ -8,7 +8,8 @@
 //   - Samsung's home bar at boot or after Home was pressed: Home hidden, no app opened -> reopen.
 //   - Home pressed inside an app Home opened: that app went visible -> hidden -> reopen.
 //   - An app that starts on its own (cast from a phone): newly running -> leave it alone.
-//   - AirPlay / screen mirroring: invisible to the local API, found in the app contexts -> leave it alone.
+//   - AirPlay / screen mirroring / a video shared from a phone: invisible to the local API, found in
+//     the app contexts -> leave it alone, even when it lands on top of an app Home opened.
 // HDMI is shown inside the Home app (tvwindow), so watching the PS5 never looks like "covered".
 // After the TV wakes from standby (remote power button) the local API can take about a minute to
 // come back, so a wake is detected from the timer gap and Home is opened at once via the Tizen API.
@@ -62,11 +63,12 @@ function snapshot(cb) {
   });
 }
 
-// AirPlay / screen mirroring from a Mac or iPhone is a Samsung system screen. The local API says
-// it is not running even while it is on screen, but it does show up in the Tizen app contexts.
-// One of its two contexts can drop out for a moment mid-cast, so the cast only counts as ended
-// after CAST_END_MS without either.
-var CAST_APPS = ['com.samsung.tv.airplay-app', 'NRi6kdBYJ0.AirPlayWebApp'];
+// AirPlay / screen mirroring from a Mac or iPhone, and a video sent from a phone, are Samsung system
+// screens. The local API says they are not running even while on screen, but they do show up in the
+// Tizen app contexts (mirroring: the AirPlay apps; a shared video: Samsung's video player).
+// A context can drop out for a moment mid-cast, so the cast only counts as ended
+// after CAST_END_MS without any of them.
+var CAST_APPS = ['com.samsung.tv.airplay-app', 'NRi6kdBYJ0.AirPlayWebApp', 'org.tizen.video-player-tv'];
 var CAST_END_MS = 5000;
 function castOn(cb) {
   try {
@@ -128,7 +130,18 @@ function tick() {
         if (state.seen) {
           // gone from the screen; wait a moment so a brief overlay doesn't count as leaving
           if (!state.goneSince) { state.goneSince = t; return; }
-          if (t - state.goneSince >= LEAVE_GRACE_MS) { state.goneSince = 0; launchSelf('left ' + state.watched); }
+          if (t - state.goneSince < LEAVE_GRACE_MS) { return; }
+          // a video cast from a phone covers the app without closing it: hand over to the cast check
+          castOn(function (cast) {
+            if (!state.watched || !state.goneSince) { return; }
+            state.goneSince = 0;
+            if (cast) {
+              note('stand aside: cast over ' + state.watched);
+              state.watched = null; state.castAt = Date.now(); state.coveredSince = 0;
+              return;
+            }
+            launchSelf('left ' + state.watched);
+          });
         } else if (t - state.watchAt > 20000) {
           launchSelf(state.watched + ' never showed up');   // failed launch: don't leave a blank screen
         }
@@ -163,13 +176,13 @@ function tick() {
       castOn(function (cast) {
         var t2 = Date.now();
         if (cast) {
-          if (!state.castAt) { note('stand aside: AirPlay'); }
+          if (!state.castAt) { note('stand aside: cast / AirPlay'); }
           state.castAt = t2; state.coveredSince = 0;
           return;
         }
         if (state.castAt) {
           if (t2 - state.castAt < CAST_END_MS) { return; }
-          state.castAt = 0; launchSelf('AirPlay ended');
+          state.castAt = 0; launchSelf('cast ended');
           return;
         }
         if (!state.coveredSince) { state.coveredSince = t2; return; }
@@ -192,6 +205,14 @@ module.exports.onStart = function () {
       note('handed to Samsung for 10 min');
     } else if (url.pathname === '/note') {
       note('app: ' + (q.msg || ''));
+    } else if (url.pathname === '/ctx') {
+      try {
+        tizen.application.getAppsContext(function (ctx) {
+          res.writeHead(200, { 'Access-Control-Allow-Origin': '*', 'Content-Type': 'application/json' });
+          res.end(JSON.stringify(ctx.map(function (c) { return c.appId; })));
+        }, function (e) { res.writeHead(500); res.end(String(e && e.message)); });
+      } catch (e) { res.writeHead(500); res.end(e.message); }
+      return;
     } else if (url.pathname === '/home') {
       state.leavingUntil = 0; state.watched = null;
     }

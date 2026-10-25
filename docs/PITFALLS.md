@@ -124,14 +124,30 @@ somewhere between a few seconds and a minute. `status.sh` shows `reopened: cover
 mirrored picture is on screen. So the watcher saw "nothing on screen" and took it back.
 **What TizenZen does:** while TizenZen is covered, the service also reads
 `tizen.application.getAppsContext()`. During a cast it lists `com.samsung.tv.airplay-app` and
-`NRi6kdBYJ0.AirPlayWebApp`; while either is there, the watcher stands aside (`stand aside: AirPlay`).
+`NRi6kdBYJ0.AirPlayWebApp`; while either is there, the watcher stands aside (`stand aside: cast / AirPlay`).
 One of the two can drop out for a moment mid-cast, so the cast only counts as ended after 5 s
 without both (`CAST_END_MS`). Both stay listed for about 60 s after the cast stops, so TizenZen
-comes back about a minute after mirroring ends (`reopened: AirPlay ended`). Press Home to skip the wait.
+comes back about a minute after mirroring ends (`reopened: cast ended`). Press Home to skip the wait.
 **If mirroring stays black after being kicked:** the Mac can say "Connected" while the TV's AirPlay
 receiver is stuck. Disconnect on the Mac, power the TV off and on with the remote, connect again.
-**Verify:** mirror for two minutes, then stop. `status.sh` shows `stand aside: AirPlay` and, about a
-minute after stopping, `reopened: AirPlay ended`. `curl http://<tv>:47791/` has a `contexts` list with
+**Verify:** mirror for two minutes, then stop. `status.sh` shows `stand aside: cast / AirPlay` and, about a
+minute after stopping, `reopened: cast ended`. `curl http://<tv>:47791/` has a `contexts` list with
 every app context the service saw last; check the AirPlay names there if your firmware differs.
 On a Mac, mirroring can be started without hands with AppleScript: Control Centre >
 checkbox `controlcenter-screen-mirroring` (click) > checkbox `screen-mirroring-device-AirPlay:<tv mac>` (AXPress).
+
+### 15. A video sent from a phone gets kicked after 1 to 6 seconds
+**Symptom:** on the phone you tap the cast / share-to-TV button on a video. It starts on the TV, then
+TizenZen jumps over it and the video pauses. `status.sh` shows `reopened: left 111299001912` (an app
+TizenZen had opened was on screen before) or `reopened: covered without an app`.
+**Cause:** the TV plays a shared video in Samsung's own player, `org.tizen.video-player-tv`.
+Like AirPlay it is invisible to the local API, and it was not in the cast list. Worse, when the cast
+landed on top of an app TizenZen had opened, the watcher took "the app is no longer on screen" as
+"the person left it" and reopened TizenZen after 0.8 s, without looking for a cast at all.
+**What TizenZen does:** `org.tizen.video-player-tv` is in `CAST_APPS`, and before reopening for a
+"left" app the service checks the app contexts too (`stand aside: cast over <app>`). When the video
+ends, the TV goes back to whatever was under it (TizenZen or the app).
+**Verify:** `tools/cast-test.sh play` sends a video over DLNA, the same way a phone does, with no
+pairing. Try it once from TizenZen and once with YouTube open. The video must play to the end;
+`status.sh` shows `stand aside: cast / AirPlay` or `stand aside: cast over ...`, never `reopened`
+while it plays. `curl http://<tv>:47791/ctx` lists the live app contexts if your firmware uses other names.

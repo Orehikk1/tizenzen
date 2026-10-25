@@ -82,6 +82,7 @@ while the app is open: it must answer `"visible":true`.
 ```sh
 TV_IP=<tv-ip> tools/selftest.sh 111299001912 <other status ids>   # must print PASS
 TV_IP=<tv-ip> tools/status.sh                                     # the watcher's own log
+TV_IP=<tv-ip> tools/cast-test.sh play video.mp4                    # phone-style cast; must play to the end (PITFALLS 15)
 ```
 
 `selftest.sh` opens each app through the TV's API, checks it stays on screen, closes it, and checks
