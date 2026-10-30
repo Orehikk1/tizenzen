@@ -1,6 +1,6 @@
 # Changelog
 
-## 2026-10-30: YouTube no longer gets kicked right after the TV is turned on
+## 1.1.0 (2026-10-30): YouTube no longer gets kicked right after the TV is turned on
 
 **Problem.** In the morning you turn the TV on and open YouTube. A few seconds later TizenZen
 jumps back over it. Some evenings it kept doing that every 6 s for two minutes.
@@ -23,7 +23,22 @@ app is "not visible", so the watcher thought nothing was on screen and kept taki
 API through five cases (wake + YouTube, wake + app opened elsewhere, wake with TizenZen hidden,
 Samsung bar, leaving YouTube). The old watcher fails three of them (21 reopens in the first).
 
-## 2026-10-25: videos shared from a phone no longer get kicked
+**Tested.** `tools/selftest.sh` PASS on a 2020 UE65TU7022 (YouTube, Jellyfin, Netflix) and
+`tools/wake-sim.js` PASS. A real power-on can't be done over the network (the screen needs the
+Power button), so the first real check is the next morning: `tools/status.sh` must show
+`watching ...` and no `reopened` until the person leaves YouTube.
+
+**Still open.**
+
+- The TV sometimes starts `com.samsung.tv.airplay-app` or `NRi6kdBYJ0.AirPlayWebApp` with no cast at
+  all (at wake, or when an iPhone nearby looks for AirPlay screens). The watcher takes that as a cast
+  and stands aside, so after leaving an app TizenZen can come back about a minute late
+  (`stand aside: cast over ...`, then `reopened: cast ended`). Nobody gets kicked; it is only a delay.
+  Left as is so the AirPlay fix (PITFALLS 14) stays safe.
+- Samsung's home bar opened with the remote's Home key on top of TizenZen does not hide the page,
+  so neither the local API nor the heartbeat can see it (same cause as PITFALLS 2). Press Back.
+
+## 1.0.2 (2026-10-25): videos shared from a phone no longer get kicked
 
 **Problem.** On the phone you tap cast or share-to-TV on a video. The video starts on the TV, then
 TizenZen jumps over it after 1 to 6 seconds and the video pauses.
@@ -78,9 +93,9 @@ Still to confirm: a cast from a real iPhone.
 **Docs.** `docs/PITFALLS.md` #15 (full write-up), README (casting feature, tool table, how it
 works), AGENTS.md (cast test in the test commands).
 
-## 2026-10-24: AirPlay screen mirroring no longer gets kicked
+## 1.0.1 (2026-10-24): AirPlay screen mirroring no longer gets kicked
 
 The watcher reads `tizen.application.getAppsContext()` and stands aside while
 `com.samsung.tv.airplay-app` or `NRi6kdBYJ0.AirPlayWebApp` is running. See `docs/PITFALLS.md` #14.
 
-## 2026-10-22: first public release
+## 1.0.0 (2026-10-22): first public release
