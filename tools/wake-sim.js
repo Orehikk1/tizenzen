@@ -10,7 +10,7 @@ const timers = []; let tid = 0;
 global.setTimeout = (f, ms) => { timers.push({ id: ++tid, at: now + ms, f }); return tid; };
 global.setInterval = (f, ms) => { const t = { id: ++tid, at: now + ms, f, every: ms }; timers.push(t); return tid; };
 let tv = {};            // id -> {running, visible} as the API reports
-let apiDown = false, contexts = [];
+let apiDown = false, contexts = [], power = 'on';
 const launches = [];
 global.tizen = { application: {
   launch: (id, ok) => { launches.push(((now - T0) / 1000).toFixed(1) + 's'); ok && ok(); },
@@ -20,7 +20,8 @@ const http = { get: (o, cb) => {
     const id = decodeURIComponent(o.path.split('/').pop()); const ev = {};
     const res = { on: (e, f) => { ev[e] = f; } };
     const req = { on: (e, f) => { if (e === 'error' && apiDown) f(new Error('x')); }, destroy() {} };
-    if (!apiDown) { cb(res); ev.data(JSON.stringify(tv[id] || { running: false, visible: false })); ev.end(); }
+    const body = o.path === '/api/v2/' ? { device: { PowerState: power } } : (tv[id] || { running: false, visible: false });
+    if (!apiDown) { cb(res); ev.data(JSON.stringify(body)); ev.end(); }
     return req; },
   createServer: (h) => { handler = h; return { listen() {} }; } };
 const orig = Module.prototype.require;
@@ -32,7 +33,7 @@ function run(ms) { const end = now + ms; for (;;) { timers.sort((a, b) => a.at -
 let T0;
 function standby(ms) { now += ms; timers.forEach(t => { if (t.at < now) t.at = now + 1; }); T0 = now; }
 function scenario(name, fn) {
-  timers.length = 0; launches.length = 0; tv = {}; apiDown = false; contexts = [];
+  timers.length = 0; launches.length = 0; tv = {}; apiDown = false; contexts = []; power = 'on';
   delete require.cache[require.resolve(path)]; const s = require(path); s.onStart();
   call('/apps?ids=111299001912,AprZAARz4r.Jellyfin');
   tv['TizenZen01.Home'] = { running: true, visible: true }; tv['111299001912'] = { running: true, visible: false };
@@ -81,4 +82,22 @@ expect('E', scenario('E no wake, YouTube then left', () => {
   tv['111299001912'] = { running: true, visible: false }; run(5000);
 }), 1);
 
+// F: light standby (the service keeps running, no timer gap). YouTube was on screen when the TV went
+// to standby; at power-on the API says YouTube is gone. Person taps the YouTube tile at 6 s.
+expect('F', scenario('F light standby, power on, tap YouTube tile at 6s, API stale', () => {
+  heartbeatLoop(); beat(false); call('/watch?id=111299001912&app=9Ur5IzDKqV.TizenYouTube');
+  tv['TizenZen01.Home'] = { running: true, visible: false }; tv['111299001912'] = { running: true, visible: true };
+  run(5000); power = 'standby'; run(600000); T0 = now;
+  power = 'on'; tv['111299001912'] = { running: true, visible: false };
+  run(1500); beat(true); run(4500);
+  beat(false); call('/watch?id=111299001912&app=9Ur5IzDKqV.TizenYouTube'); run(120000);
+}), 1);
+// G: light standby, power on, YouTube comes back by itself (TV restores it), no tile press.
+expect('G', scenario('G light standby, power on, API stale, nothing pressed', () => {
+  heartbeatLoop(); beat(false);
+  tv['TizenZen01.Home'] = { running: true, visible: false }; tv['111299001912'] = { running: true, visible: true };
+  run(5000); power = 'standby'; run(600000); T0 = now;
+  power = 'on'; tv['111299001912'] = { running: true, visible: false };
+  run(1500); beat(true); run(3000); beat(false); run(120000);
+}), 1);
 console.log(fail ? '\nFAIL' : '\nPASS'); process.exit(fail);

@@ -13,6 +13,8 @@
 // HDMI is shown inside the Home app (tvwindow), so watching the PS5 never looks like "covered".
 // After the TV wakes from standby (remote power button) the local API can take about a minute to
 // come back, so a wake is detected from the timer gap and Home is opened at once via the Tizen API.
+// Some standby is light: the service keeps running, so there is no timer gap. The local API's
+// PowerState ("standby" / "on") catches that wake; while it says standby the service does nothing.
 // For a few minutes after a wake the local API also lies: an app on screen reads "not visible". So
 // in that window the service trusts the Home app's own heartbeat (/alive) and does not take the
 // screen back more than once: being kicked out of YouTube is worse than seeing Samsung's bar.
@@ -26,7 +28,7 @@ var LEAVE_MS = 10 * 60 * 1000;  // "Samsung menu" hands the TV back for this lon
 var state = {
   watched: null, seen: false, leavingUntil: 0,
   apps: [], running: {}, selfVisible: null, hiddenSince: 0, watchAt: 0, lastLaunch: 0, last: null,
-  log: []
+  log: [], ticks: 0, power: null
 };
 var WAKE_GAP_MS = 5000;
 var COVER_GRACE_MS = 6000;  // nothing on screen this long -> Samsung's bar is showing (slow apps like Jellyfin need ~4 s to report)
@@ -53,6 +55,33 @@ function get(path, cb) {
   });
   req.on('error', function () { cb(null); });
   req.on('timeout', function () { req.destroy(); });
+}
+
+// PowerState from the device info: "on" or "standby" (the service keeps running in light standby).
+function powerState(cb) {
+  var req = http.get({ host: '127.0.0.1', port: 8001, path: '/api/v2/', timeout: 1500 }, function (res) {
+    var body = '';
+    res.on('data', function (c) { body += c; });
+    res.on('end', function () {
+      var p = null; try { p = JSON.parse(body).device.PowerState; } catch (e) {}
+      cb(p || null);
+    });
+  });
+  req.on('error', function () { cb(null); });
+  req.on('timeout', function () { req.destroy(); });
+}
+var powerBusy = false;
+function checkPower() {
+  if (powerBusy) { return; }
+  powerBusy = true;
+  powerState(function (p) {
+    powerBusy = false;
+    if (!p) { return; }
+    var was = state.power;
+    state.power = p;
+    if (was === 'standby' && p === 'on') { onWake('TV turned on'); }
+    else if (was === 'on' && p === 'standby') { note('TV in standby'); }
+  });
 }
 
 function appStatus(id, cb) { get('/api/v2/applications/' + encodeURIComponent(id), cb); }
@@ -124,8 +153,8 @@ function launchSelf(why) {
   }
 }
 
-function onWake() {
-  note('TV woke up');
+function onWake(why) {
+  note(why || 'TV woke up');
   state.watched = null; state.leavingUntil = 0; state.lastLaunch = 0;
   state.wakeAt = Date.now(); state.upAfterWake = false; state.settleReclaims = 0;
   launchSelf('wake');
@@ -143,8 +172,10 @@ function onWake() {
 var busy = false;
 function tick() {
   var now0 = Date.now();
-  if (now0 - lastTick > WAKE_GAP_MS) { lastTick = now0; return onWake(); }
+  if (now0 - lastTick > WAKE_GAP_MS) { lastTick = now0; state.power = null; return onWake(); }
   lastTick = now0;
+  if (++state.ticks % 3 === 0) { checkPower(); }
+  if (state.power === 'standby') { return; }   // screen off: nothing to keep in front
   if (now0 < state.leavingUntil || busy) { return; }
   busy = true;
   setTimeout(function () { busy = false; }, 2500);  // never stay stuck if a request hangs
@@ -220,7 +251,8 @@ function tick() {
       if (r.__visible) {
         state.apiLiveAt = t;
         state.watched = r.__visible; state.seen = true; state.coveredSince = 0; state.castAt = 0; delete r.__visible; state.running = r;
-        note('stand aside: ' + state.watched + ' is on screen');
+        var msg = 'stand aside: ' + state.watched + ' is on screen';
+        if (state.last !== msg) { note(msg); }   // the API flickers after a wake; log it once
         return;
       }
       for (var id in r) {

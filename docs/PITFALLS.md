@@ -167,6 +167,10 @@ while TizenZen has not been on screen yet and nothing was opened. Until the loca
 appearing on screen again (or for 3 minutes), the watcher takes the screen back at most once, and never
 after TizenZen was already on screen: it logs `hold: ... (TV just woke, local API unsure)` instead.
 The cost: if you press the remote's Home key in that window you may see Samsung's bar. Press Back.
+**Light standby (1.1.1).** For a while after Power off (seconds, sometimes an hour) the TV is in a
+light standby: the service keeps running, so there is no timer gap, and the local API still lists the
+last app as on screen. The service reads `PowerState` from `/api/v2/` (`standby` / `on`), does nothing
+in standby and treats `standby` to `on` as a wake (`TV turned on` in the log).
 **Verify:** `node tools/wake-sim.js` replays the wake cases with a fake TV API and must print PASS.
 On the TV: turn it on, open YouTube within 10 s, watch for a minute. `status.sh` shows `watching ...`
 and no `reopened` until you leave YouTube.

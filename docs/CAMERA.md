@@ -24,5 +24,10 @@ ffmpeg -f avfoundation -framerate 30 -pixel_format nv12 -i "iPhone Camera" -t 60
 **Other setups:** any webcam or a USB camera works the same way (`ffmpeg -f v4l2` on Linux,
 `-f dshow` on Windows). Without a camera, ask the person for a phone photo of the screen.
 
+**A camera that ffmpeg opens but gets no frames from** (seen with a DJI Osmo Pocket 3 in webcam
+mode on macOS: the device is listed, ffmpeg hangs with no picture): open it in FaceTime (or Photo
+Booth), choose it as the camera, and take Mac screenshots with `screencapture -x full.png`, then crop
+to the camera window. Crop tight, so the rest of the person's screen (contacts, mail) stays out.
+
 Tips from real use: the photo is useless if the phone slips or something stands in front of it;
 check the first photo shows the whole screen. Crop to the TV before reading small text.

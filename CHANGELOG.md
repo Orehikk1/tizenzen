@@ -1,5 +1,26 @@
 # Changelog
 
+## 1.1.1 (2026-10-30): the same kick after a light standby
+
+**Problem.** Still kicked out of YouTube after turning the TV on, the same day 1.1.0 went out.
+
+**Cause.** This TV has two kinds of standby. In deep standby the watcher's timers stop, so the
+wake shows up as a timer gap and 1.1.0 handled it. In light standby (the first seconds to an hour
+after Power off) the watcher keeps running, so there is no gap and the 1.1.0 protection never
+switched on. Worse, in light standby the local API still says the last app (YouTube) is on screen; at
+power-on it suddenly says it is gone, and the watcher read that as "the person left YouTube".
+
+**Fix** (`app/service/index.js`). The watcher reads `PowerState` from `http://127.0.0.1:8001/api/v2/`
+about once a second. While it says `standby` the watcher does nothing (`TV in standby`). `standby` to
+`on` counts as a wake (`TV turned on`), with the same protection as 1.1.0. Repeated
+`stand aside: ... is on screen` lines are logged once, so the 40-line log keeps the useful lines.
+
+**Tested.** `node tools/wake-sim.js` has two new cases (light standby + YouTube tile, light standby +
+YouTube restored by the TV); 1.1.0 fails both (17 and 20 reopens), 1.1.1 passes all 7.
+`tools/selftest.sh` PASS. On the real TV, watched through a camera: Power off, Wake-on-LAN on,
+YouTube opened 6 s later: the log shows `TV in standby`, `TV turned on`, `reopened: wake`, then
+`stand aside: 111299001912 is on screen`, and YouTube stayed on screen for the whole 90 s check.
+
 ## 1.1.0 (2026-10-30): YouTube no longer gets kicked right after the TV is turned on
 
 **Problem.** In the morning you turn the TV on and open YouTube. A few seconds later TizenZen
