@@ -19,6 +19,12 @@ connection, PITFALLS #9.) Typical candidates: e-Manual, Spotify if unused (it al
 working). Add it to Pi-hole, AdGuard Home or NextDNS. Most general blocklists (OISD, Hagezi) already
 cover most of it; on one TV only `gpm.samsungqbe.com` (telemetry) and `samsungrm.net` were missing.
 
+**Installing an app while blocking.** Blocking `gpm.samsungqbe.com` breaks the App Store: the list
+loads, but every app page says "Server is down for maintenance. Please try again later. (1144104)".
+The TV asks for that domain only around power-on, so unblocking alone is not enough: pause the
+blocking (Pi-hole: `pihole disable 15m`), turn the TV off and on, install, and let the pause run out.
+The store may then ask you to accept new Samsung account terms; only the TV's owner can do that.
+
 Check a domain: `dig +short @<dns-server> samsungacr.com` → `0.0.0.0` or empty means blocked.
 No home DNS server? Set the TV's DNS to AdGuard DNS `94.140.14.14`
 (Settings > Connection > Network > Network Status > IP Settings).

@@ -103,7 +103,11 @@ function snapshot(cb) {
 // Tizen app contexts (mirroring: the AirPlay apps; a shared video: Samsung's video player).
 // A context can drop out for a moment mid-cast, so the cast only counts as ended
 // after CAST_END_MS without any of them.
+// Either AirPlay app also shows up alone now and then with no cast at all (after boot, or when an
+// iPhone nearby looks for screens), so a cast starts only when both are there; once it runs, one is
+// enough to keep it going.
 var CAST_APPS = ['com.samsung.tv.airplay-app', 'NRi6kdBYJ0.AirPlayWebApp', 'org.tizen.video-player-tv'];
+var AIRPLAY_APPS = ['com.samsung.tv.airplay-app', 'NRi6kdBYJ0.AirPlayWebApp'];
 var CAST_END_MS = 5000;
 // Apps whose running process has another name than the id used to open them.
 var CONTEXT_OF = { '9Ur5IzDKqV.TizenYouTube': 'com.samsung.tv.cobalt-yt' };
@@ -111,7 +115,9 @@ function castOn(cb) {
   try {
     tizen.application.getAppsContext(function (ctx) {
       state.contexts = ctx.map(function (c) { return c.appId; });
-      cb(ctx.some(function (c) { return CAST_APPS.indexOf(c.appId) >= 0; }));
+      var ids = state.contexts;
+      var air = AIRPLAY_APPS.filter(function (id) { return ids.indexOf(id) >= 0; }).length;
+      cb(ids.indexOf('org.tizen.video-player-tv') >= 0 || air === 2 || (air === 1 && !!state.castAt));
     }, function () { cb(false); });
   } catch (e) { cb(false); }
 }

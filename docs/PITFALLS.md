@@ -128,6 +128,11 @@ mirrored picture is on screen. So the watcher saw "nothing on screen" and took i
 One of the two can drop out for a moment mid-cast, so the cast only counts as ended after 5 s
 without both (`CAST_END_MS`). Both stay listed for about 60 s after the cast stops, so TizenZen
 comes back about a minute after mirroring ends (`reopened: cast ended`). Press Home to skip the wait.
+**1.2.0:** either AirPlay app can also be listed with no cast at all, alone or both together. A cast
+now starts only when both are listed; once it runs, one keeps it going. When both linger with no cast,
+TizenZen comes back about a minute late after you leave an app. Nothing better was found: contexts,
+the local API and AirPlay's own `/info` (port from `dns-sd -L "<tv name>" _airplay._tcp`) and `flags`
+look the same with and without a cast.
 **If mirroring stays black after being kicked:** the Mac can say "Connected" while the TV's AirPlay
 receiver is stuck. Disconnect on the Mac, power the TV off and on with the remote, connect again.
 **Verify:** mirror for two minutes, then stop. `status.sh` shows `stand aside: cast / AirPlay` and, about a

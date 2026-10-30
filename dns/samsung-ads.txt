@@ -24,4 +24,5 @@ log-config.samsungacr.com
 acr0.samsungcloudsolution.com
 
 # Usage telemetry
-gpm.samsungqbe.com
+# gpm.samsungqbe.com  -- blocking it breaks the App Store: every app page says "Server is down for
+#                        maintenance (1144104)" (UE65TU7022, 2026-10). Block it only if you never install apps.

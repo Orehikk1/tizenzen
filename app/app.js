@@ -10,7 +10,7 @@
     '&daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset' +
     '&timezone=auto&forecast_days=8';
   var WEATHER_EVERY_MS = 30 * 60 * 1000;
-  var DIM_MAX = 0.38;          // how dark the screen gets at night
+  var DIM_MAX = 0.35;          // how dark the video gets at night (text and tiles are not dimmed)
   var DIM_RAMP_MIN = 45;       // minutes to fade in/out around sunset/sunrise
 
   var DAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -279,6 +279,7 @@
     youtube: '<rect x="2.5" y="5.5" width="19" height="13" rx="3.5"/><path d="M10 9.2v5.6l4.8-2.8z" class="fill"/>',
     jellyfin: '<path d="M12 3c-2.4 0-9 12.6-7.8 15S18.6 20.4 19.8 18 14.4 3 12 3zm0 5.2c1.4 0 5.2 7.2 4.4 8.6s-8 1.4-8.8 0S10.6 8.2 12 8.2z" class="fill"/><path d="M12 11.2c-.8 0-2.8 4-2.4 4.8s4.4.8 4.8 0-1.6-4.8-2.4-4.8z" class="fill"/>',
     netflix: '<path d="M8 3.5v17M16 3.5v17M8 3.5l8 17"/>',
+    hbo: '<path d="M2.5 7v10M6.5 7v10M2.5 12h4M9 7v10h2.7a2.5 2.5 0 0 0 0-5H9m0 0h2.3a2.5 2.5 0 0 0 0-5H9"/><circle cx="18.4" cy="12" r="3.4"/>',
     play: '<circle cx="12" cy="12" r="9"/><path d="M10 8.5v7l6-3.5z" class="fill"/>',
     music: '<path d="M9 18V5.5l11-2V16"/><circle cx="6.5" cy="18" r="2.5"/><circle cx="17.5" cy="16" r="2.5"/>',
     globe: '<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3c2.5 2.6 3.8 5.6 3.8 9s-1.3 6.4-3.8 9c-2.5-2.6-3.8-5.6-3.8-9S9.5 5.6 12 3z"/>',

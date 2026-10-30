@@ -10,7 +10,7 @@ window.TIZENZEN = {
   //   id:     Tizen app id, used to open the app. List them with: tools/sdb-apps.sh
   //   status: id the TV's local API knows the app by, used to notice when you leave it.
   //           For Samsung's preinstalled apps this is the Smart Hub number, not the Tizen id.
-  //   icon:   youtube | jellyfin | netflix | play | music | globe
+  //   icon:   youtube | jellyfin | netflix | hbo | play | music | globe
   tiles: [
     { label: 'YouTube', icon: 'youtube', id: '9Ur5IzDKqV.TizenYouTube', status: '111299001912' },
     { label: 'Netflix', icon: 'netflix', id: 'org.tizen.netflix-app', status: '3201907018807' }

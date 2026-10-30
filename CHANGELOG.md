@@ -1,5 +1,30 @@
 # Changelog
 
+## 1.2.0 (2026-10-30): brighter at night, HBO Max tile, fewer false casts
+
+**Brighter.** The sunset dim used to lay a black layer over the whole screen, clock and tiles
+included, on top of dark-glass tiles. Now it darkens only the video behind (`#dim` sits under the
+text), tiles are a more solid dark glass with a thin light edge and a shadow, icons and labels are
+bigger and bolder, and grey text is brighter (`.muted` 0.55 to 0.75).
+
+**HBO Max.** New tile icon `hbo` (the letters H B O in the same line style). Its ids on a 2020 TV:
+open with `5b8c3eb16b.BeamCTVDev`, status `3202301029760` (the local API does not know it by its Tizen
+id, so with the Tizen id as status the watcher would have called it "never showed up" after 20 s).
+
+**Fewer false casts.** The two AirPlay apps also show up with no cast at all (after boot, after a
+Mac or iPhone talked to the TV). A cast now starts only when both are there (or Samsung's video
+player is), and one is enough to keep a running cast going. Real Mac mirroring tested: TizenZen stood
+aside and came back 64 s after it stopped. Limit: sometimes both show up with no cast, and then
+TizenZen comes back about a minute late after leaving an app. The TV gives no better signal: the app
+contexts, the local API and the AirPlay `/info` and `flags` were the same with and without a cast.
+
+**DNS list.** `gpm.samsungqbe.com` is commented out in `dns/samsung-ads.txt`: blocking it breaks the
+App Store (docs/TV-SETTINGS.md has the install steps when you keep it blocked).
+
+**Tested.** `node tools/wake-sim.js` PASS; `tools/selftest.sh` with YouTube, Jellyfin and HBO Max opens
+each app and closes it: PASS, with a lone leftover `NRi6kdBYJ0.AirPlayWebApp` listed the whole time (1.1.1
+would have stood aside for it); the new look and the HBO tile checked on camera.
+
 ## 1.1.1 (2026-10-30): the same kick after a light standby
 
 **Problem.** Still kicked out of YouTube after turning the TV on, the same day 1.1.0 went out.
