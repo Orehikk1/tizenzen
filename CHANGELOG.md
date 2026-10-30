@@ -1,5 +1,28 @@
 # Changelog
 
+## 2026-10-30: YouTube no longer gets kicked right after the TV is turned on
+
+**Problem.** In the morning you turn the TV on and open YouTube. A few seconds later TizenZen
+jumps back over it. Some evenings it kept doing that every 6 s for two minutes.
+
+**Cause.** After a wake the watcher reopened TizenZen at +4 s and +10 s no matter what, so a
+quick YouTube tap was undone. And for one to two minutes after a wake the TV's local API says every
+app is "not visible", so the watcher thought nothing was on screen and kept taking it back.
+
+**Fix** (`app/service/index.js`, `app/app.js`).
+
+- The Home app pings the watcher every second while it is on screen (`/alive`), says when it
+  leaves (`/hidden`) and resends `/watch` if the first try is lost.
+- Wake retries are skipped once TizenZen has been on screen or an app was opened (`skip wake +10s: app opened`).
+- Until the local API shows something appearing on screen again (at most 3 minutes), the watcher takes
+  the screen back at most once and never after TizenZen was on screen (`hold: ...`).
+- Right after a wake, an app opened from TizenZen whose process is running is not called "never
+  showed up" just because the local API is slow.
+
+**New test.** `node tools/wake-sim.js` runs the watcher on the computer with a fake clock and fake TV
+API through five cases (wake + YouTube, wake + app opened elsewhere, wake with TizenZen hidden,
+Samsung bar, leaving YouTube). The old watcher fails three of them (21 reopens in the first).
+
 ## 2026-10-25: videos shared from a phone no longer get kicked
 
 **Problem.** On the phone you tap cast or share-to-TV on a video. The video starts on the TV, then

@@ -339,14 +339,21 @@
         SERVICE_ID, null, null);
     } catch (e) { /* no service: Home button simply goes to Samsung's bar */ }
   }
-  function tell(path) {
+  // tries > 1: resend on failure. Right after the TV wakes the first request can get lost, and a
+  // lost /watch made the service think nothing was on screen and kick the person out of YouTube.
+  function tell(path, tries) {
     if (!isTizen) return;
     var x = new XMLHttpRequest();
     x.open('GET', SERVICE_URL + path);
     x.timeout = 1500;
-    x.onerror = x.ontimeout = startService;   // not running yet (first start, crash): start it
+    x.onerror = x.ontimeout = function () {
+      startService();   // not running yet (first start, crash): start it
+      if (tries > 1) setTimeout(function () { tell(path, tries - 1); }, 700);
+    };
     x.send();
   }
+  // heartbeat: the service trusts this over the TV's local API, which lags after a wake
+  setInterval(function () { if (!document.hidden) tell('/alive'); }, 1000);
 
   // ---- opening apps ----
   // untracked: the TV can't report this app (the App Store), so hand the screen over for 10 minutes
@@ -356,7 +363,7 @@
     (function next() {
       var id = list.shift();
       if (!id) { toast('Could not open ' + name); return; }
-      tell(untracked ? '/leave' : '/watch?id=' + encodeURIComponent(STATUS_ID[id] || id));
+      tell(untracked ? '/leave' : '/watch?id=' + encodeURIComponent(STATUS_ID[id] || id) + '&app=' + encodeURIComponent(id), 8);
       try { tizen.application.launch(id, null, next); } catch (e) { next(); }
     })();
   }
@@ -498,7 +505,7 @@
 
   // Leaving for YouTube/Jellyfin frees the video; coming back refreshes clock, video and (if stale) weather.
   document.addEventListener('visibilitychange', function () {
-    if (document.hidden) { releaseVideo(); bg.className = ''; return; }
+    if (document.hidden) { tell('/hidden'); releaseVideo(); bg.className = ''; return; }
     tell('/home');
     reportApps();
     tickClock();

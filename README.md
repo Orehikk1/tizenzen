@@ -51,7 +51,7 @@ and once press Power), installs, and tests everything itself.
 ## For Claude (and other assistants)
 
 Start with **[AGENTS.md](AGENTS.md)**: the full playbook, written by Claude after doing this the long
-way on a real TV. Then **[docs/PITFALLS.md](docs/PITFALLS.md)**: 15 places where the obvious idea
+way on a real TV. Then **[docs/PITFALLS.md](docs/PITFALLS.md)**: 16 places where the obvious idea
 fails on Tizen, each with the symptom, the cause, the fix and a command to check it yourself.
 
 What is in the box:
@@ -64,6 +64,7 @@ What is in the box:
 | `tools/deploy.sh` | Package, install and start on the TV |
 | `tools/selftest.sh` | Opens and closes apps over the network and checks TizenZen comes back. Prints PASS |
 | `tools/status.sh` | The watcher's own log: every decision it made |
+| `tools/wake-sim.js` | Runs the watcher on your computer through the TV wake-up cases (fake TV API). Prints PASS |
 | `tools/cast-test.sh` | Sends a video to the TV like a phone does (DLNA, no pairing), to test casting |
 | `tools/tvkey.py` | Remote keys over the network (Home, Back, long press, Power) |
 | `tools/camera-snap.sh` | A photo of the TV through a phone camera, when only a screen can tell ([docs/CAMERA.md](docs/CAMERA.md)) |

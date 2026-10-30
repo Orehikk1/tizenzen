@@ -151,3 +151,22 @@ ends, the TV goes back to whatever was under it (TizenZen or the app).
 pairing. Try it once from TizenZen and once with YouTube open. The video must play to the end;
 `status.sh` shows `stand aside: cast / AirPlay` or `stand aside: cast over ...`, never `reopened`
 while it plays. `curl http://<tv>:47791/ctx` lists the live app contexts if your firmware uses other names.
+
+### 16. Right after the TV is turned on, YouTube gets kicked back to TizenZen
+**Symptom:** you turn the TV on in the morning and open YouTube. After a few seconds TizenZen jumps
+back over it, sometimes again and again for a minute or two. `status.sh` shows `reopened: wake +10s`
+after `watching 111299001912`, or a long run of `reopened: covered without an app`.
+**Cause:** two things. (1) After a wake the watcher reopened TizenZen again at +4 s and +10 s, to beat
+Samsung restoring its last screen, without checking whether the person had already opened an app.
+(2) For one to two minutes after a wake the local API (port 8001) is stale: it says every app,
+YouTube included, is "not visible". The watcher read that as "nothing covers TizenZen" and took the
+screen back every 6 s. The `/watch` message from the Home app can also get lost right after a wake.
+**What TizenZen does:** the Home app pings `/alive` every second while it is on screen (hidden pages
+stop), sends `/hidden` when it leaves, and resends `/watch` up to 8 times. The wake retries run only
+while TizenZen has not been on screen yet and nothing was opened. Until the local API shows something
+appearing on screen again (or for 3 minutes), the watcher takes the screen back at most once, and never
+after TizenZen was already on screen: it logs `hold: ... (TV just woke, local API unsure)` instead.
+The cost: if you press the remote's Home key in that window you may see Samsung's bar. Press Back.
+**Verify:** `node tools/wake-sim.js` replays the wake cases with a fake TV API and must print PASS.
+On the TV: turn it on, open YouTube within 10 s, watch for a minute. `status.sh` shows `watching ...`
+and no `reopened` until you leave YouTube.

@@ -13,6 +13,9 @@
 // HDMI is shown inside the Home app (tvwindow), so watching the PS5 never looks like "covered".
 // After the TV wakes from standby (remote power button) the local API can take about a minute to
 // come back, so a wake is detected from the timer gap and Home is opened at once via the Tizen API.
+// For a few minutes after a wake the local API also lies: an app on screen reads "not visible". So
+// in that window the service trusts the Home app's own heartbeat (/alive) and does not take the
+// screen back more than once: being kicked out of YouTube is worse than seeing Samsung's bar.
 // The Home app talks to this service on port 47791; GET / on the LAN shows state and a short log.
 
 var http = require('http');
@@ -27,7 +30,10 @@ var state = {
 };
 var WAKE_GAP_MS = 5000;
 var COVER_GRACE_MS = 6000;  // nothing on screen this long -> Samsung's bar is showing (slow apps like Jellyfin need ~4 s to report)
-var LEAVE_GRACE_MS = 800;   // app gone from screen this long -> it was left  // timers freeze in standby; a gap this long means the TV just woke
+var LEAVE_GRACE_MS = 800;   // app gone from screen this long -> it was left
+var SETTLE_MS = 180000;     // after a wake the local API can be stale this long
+var ALIVE_MS = 2500;        // the Home app pings /alive every second while it is on screen
+var STALE_MS = 8000;        // Home pinging while the API says hidden this long -> API is stale
 var lastTick = Date.now();
 
 function note(msg) {
@@ -70,6 +76,8 @@ function snapshot(cb) {
 // after CAST_END_MS without any of them.
 var CAST_APPS = ['com.samsung.tv.airplay-app', 'NRi6kdBYJ0.AirPlayWebApp', 'org.tizen.video-player-tv'];
 var CAST_END_MS = 5000;
+// Apps whose running process has another name than the id used to open them.
+var CONTEXT_OF = { '9Ur5IzDKqV.TizenYouTube': 'com.samsung.tv.cobalt-yt' };
 function castOn(cb) {
   try {
     tizen.application.getAppsContext(function (ctx) {
@@ -77,6 +85,29 @@ function castOn(cb) {
       cb(ctx.some(function (c) { return CAST_APPS.indexOf(c.appId) >= 0; }));
     }, function () { cb(false); });
   } catch (e) { cb(false); }
+}
+
+// Home's own heartbeat: true only while the Home page is on screen (hidden pages stop pinging).
+function homeUp() { return Date.now() - (state.aliveAt || 0) < ALIVE_MS; }
+// A stale local API says "hidden" for everything, so once it reports Home or an app appearing on
+// screen after the wake it is live again and the window closes early.
+function settling() {
+  var t = Date.now();
+  if (t - (state.staleAt || 0) < 60000) { return true; }
+  return t - (state.wakeAt || 0) < SETTLE_MS && !((state.apiLiveAt || 0) > state.wakeAt);
+}
+// Take the screen back, unless the TV just woke and the local API can't be trusted yet: then only
+// once, and never after Home was already on screen (whatever covers it now, the person chose).
+function reclaim(why) {
+  if (settling()) {
+    if (state.upAfterWake || state.settleReclaims >= 1) {
+      var msg = 'hold: ' + why + ' (TV just woke, local API unsure)';
+      if (state.last !== msg) { note(msg); }
+      return;
+    }
+    state.settleReclaims++;
+  }
+  launchSelf(why);
 }
 
 function launchSelf(why) {
@@ -96,10 +127,17 @@ function launchSelf(why) {
 function onWake() {
   note('TV woke up');
   state.watched = null; state.leavingUntil = 0; state.lastLaunch = 0;
+  state.wakeAt = Date.now(); state.upAfterWake = false; state.settleReclaims = 0;
   launchSelf('wake');
-  // the TV may still be busy restoring the last screen; repeat once it has settled
-  setTimeout(function () { state.lastLaunch = 0; launchSelf('wake +4s'); }, 4000);
-  setTimeout(function () { state.lastLaunch = 0; launchSelf('wake +10s'); }, 10000);
+  // the TV may still be busy restoring the last screen; repeat, but only while Home has not shown
+  // up and the person has not opened anything (a retry used to kick them out of YouTube)
+  function retry(why) {
+    if (state.upAfterWake) { return; }
+    if (state.watched || (state.activityAt || 0) > state.wakeAt) { note('skip ' + why + ': app opened'); return; }
+    state.lastLaunch = 0; launchSelf(why);
+  }
+  setTimeout(function () { retry('wake +4s'); }, 4000);
+  setTimeout(function () { retry('wake +10s'); }, 10000);
 }
 
 var busy = false;
@@ -112,9 +150,19 @@ function tick() {
   setTimeout(function () { busy = false; }, 2500);  // never stay stuck if a request hangs
   appStatus(SELF, function (me) {
     busy = false;
-    if (!me) { return; }
     var now = Date.now();
-    if (me.visible) {
+    var up = homeUp();
+    if (me && me.visible && state.apiVisible === false) { state.apiLiveAt = now; }
+    if (me) { state.apiVisible = me.visible; }
+    // Home pinging while the API says hidden, for longer than the normal few seconds of lag when a
+    // slow app opens or closes: the API is stale
+    if (!(up && me && !me.visible)) { state.disagreeSince = 0; }
+    else if (!state.disagreeSince) { state.disagreeSince = now; }
+    var stale = !!state.disagreeSince && now - state.disagreeSince > STALE_MS;
+    if (stale) { state.staleAt = now; }
+    if (!me && !(up && now - (state.staleAt || 0) < 10000)) { return; }
+    if (me ? (me.visible || stale) : true) {
+      state.upAfterWake = true;
       state.selfVisible = true; state.hiddenSince = 0; state.watched = null; state.coveredSince = 0; state.castAt = 0;
       if (now - (state.snapAt || 0) > 5000) { state.snapAt = now; snapshot(function (r) { delete r.__visible; state.running = r; state.haveBaseline = true; }); }
       return;
@@ -126,7 +174,7 @@ function tick() {
       appStatus(state.watched, function (s) {
         if (!s || !state.watched) { return; }
         var t = Date.now();
-        if (s.visible) { state.seen = true; state.goneSince = 0; return; }
+        if (s.visible) { state.seen = true; state.goneSince = 0; state.apiLiveAt = t; return; }
         if (state.seen) {
           // gone from the screen; wait a moment so a brief overlay doesn't count as leaving
           if (!state.goneSince) { state.goneSince = t; return; }
@@ -140,10 +188,19 @@ function tick() {
               state.watched = null; state.castAt = Date.now(); state.coveredSince = 0;
               return;
             }
-            launchSelf('left ' + state.watched);
+            reclaim('left ' + state.watched);
           });
         } else if (t - state.watchAt > 20000) {
-          launchSelf(state.watched + ' never showed up');   // failed launch: don't leave a blank screen
+          // failed launch: don't leave a blank screen. Right after a wake the API may just be slow.
+          if (settling() && state.watchedApp) {
+            castOn(function () {
+              if (!state.watched) { return; }
+              if ((state.contexts || []).indexOf(state.watchedApp) >= 0) { state.watchAt = Date.now(); return; }
+              reclaim(state.watched + ' never showed up');
+            });
+            return;
+          }
+          launchSelf(state.watched + ' never showed up');
         }
       });
       return;
@@ -161,6 +218,7 @@ function tick() {
         return;
       }
       if (r.__visible) {
+        state.apiLiveAt = t;
         state.watched = r.__visible; state.seen = true; state.coveredSince = 0; state.castAt = 0; delete r.__visible; state.running = r;
         note('stand aside: ' + state.watched + ' is on screen');
         return;
@@ -182,11 +240,11 @@ function tick() {
         }
         if (state.castAt) {
           if (t2 - state.castAt < CAST_END_MS) { return; }
-          state.castAt = 0; launchSelf('cast ended');
+          state.castAt = 0; reclaim('cast ended');
           return;
         }
         if (!state.coveredSince) { state.coveredSince = t2; return; }
-        if (t2 - state.coveredSince >= COVER_GRACE_MS) { state.coveredSince = 0; launchSelf('covered without an app'); }
+        if (t2 - state.coveredSince >= COVER_GRACE_MS) { state.coveredSince = 0; reclaim('covered without an app'); }
       });
     });
   });
@@ -197,11 +255,21 @@ module.exports.onStart = function () {
     var url = require('url').parse(req.url, true), q = url.query;
     if (url.pathname === '/watch') {
       state.watched = q.id || null; state.seen = false; state.leavingUntil = 0; state.watchAt = Date.now();
+      state.watchedApp = CONTEXT_OF[q.app] || q.app || null; state.activityAt = Date.now(); state.aliveAt = 0;
       note('watching ' + state.watched);
+    } else if (url.pathname === '/hidden') {
+      state.aliveAt = 0;
+      res.writeHead(204, { 'Access-Control-Allow-Origin': '*' }); res.end();
+      return;
+    } else if (url.pathname === '/alive') {
+      state.aliveAt = Date.now();
+      if (state.wakeAt && state.aliveAt - state.wakeAt > 500) { state.upAfterWake = true; }
+      res.writeHead(204, { 'Access-Control-Allow-Origin': '*' }); res.end();
+      return;
     } else if (url.pathname === '/apps') {
       state.apps = (q.ids || '').split(',').filter(Boolean);
     } else if (url.pathname === '/leave') {
-      state.leavingUntil = Date.now() + LEAVE_MS; state.watched = null;
+      state.leavingUntil = Date.now() + LEAVE_MS; state.watched = null; state.activityAt = Date.now();
       note('handed to Samsung for 10 min');
     } else if (url.pathname === '/note') {
       note('app: ' + (q.msg || ''));
@@ -220,6 +288,7 @@ module.exports.onStart = function () {
     res.end(JSON.stringify(state));
   }).listen(PORT, '0.0.0.0');
   note('service started');
+  state.wakeAt = Date.now();   // a cold boot is a wake too: the local API starts slow
   setInterval(tick, 300);
   // Started at boot (on-boot="true"): open Home so the TV comes up on it.
   setTimeout(function () { launchSelf('boot'); }, 3000);
